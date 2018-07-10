@@ -16,7 +16,7 @@ namespace ServiceStack.OrmLite
         public static Task<int> ExecNonQueryAsync(this IDbCommand dbCmd, string sql, object anonType, CancellationToken token = default(CancellationToken))
         {
             if (anonType != null)
-                dbCmd.SetParameters(anonType.ToObjectDictionary(), (bool)false);
+                dbCmd.SetParameters(anonType.ToObjectDictionary(), (bool)false, sql:ref sql);
 
             dbCmd.CommandText = sql;
 
@@ -29,7 +29,7 @@ namespace ServiceStack.OrmLite
         public static Task<int> ExecNonQueryAsync(this IDbCommand dbCmd, string sql, Dictionary<string, object> dict, CancellationToken token = default(CancellationToken))
         {
             if (dict != null)
-                dbCmd.SetParameters(dict, (bool)false);
+                dbCmd.SetParameters(dict, (bool)false, sql:ref sql);
 
             dbCmd.CommandText = sql;
 
@@ -162,8 +162,7 @@ namespace ServiceStack.OrmLite
 
         public static Task<object> ScalarAsync(this IDbCommand dbCmd, ISqlExpression expression, CancellationToken token)
         {
-            dbCmd.CommandText = expression.ToSelectStatement();
-            dbCmd.SetParameters(expression.Params);
+            dbCmd.PopulateWith(expression);
 
             if (OrmLiteConfig.ResultsFilter != null)
                 return OrmLiteConfig.ResultsFilter.GetScalar(dbCmd).InTask();

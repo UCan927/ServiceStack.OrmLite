@@ -12,6 +12,9 @@ namespace ServiceStack.OrmLite.Tests
 {
     public class Config
     {
+        public static Dialect DefaultDialect = Dialect.Sqlite;
+        public const bool EnableDebugLogging = false;
+
         public static string SqliteMemoryDb = ":memory:";
         public static string SqliteFileDir = "~/App_Data/".MapAbsolutePath();
         public static string SqliteFileDb = "~/App_Data/db.sqlite".MapAbsolutePath();
@@ -20,11 +23,10 @@ namespace ServiceStack.OrmLite.Tests
         //public static string SqlServerBuildDb = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=SSPI;Connect Timeout=120;MultipleActiveResultSets=True";
 
         public static string OracleDb = "Data Source=localhost:1521/ormlite;User ID=test;Password=test";
-        public static string MySqlDb = "Server=localhost;Database=test;UID=root;Password=test";
+        public static string MySqlDb = "Server=localhost;Database=test;UID=root;Password=test;SslMode=none";
         public static string PostgreSqlDb = "Server=localhost;Port=5432;User Id=test;Password=test;Database=test;Pooling=true;MinPoolSize=0;MaxPoolSize=200";
         public static string FirebirdDb = @"User=SYSDBA;Password=masterkey;Database=C:\src\ServiceStack.OrmLite\tests\ServiceStack.OrmLite.Tests\App_Data\TEST.FDB;DataSource=localhost;Dialect=3;charset=ISO8859_1;";
 
-        public static Dialect DefaultDialect = Dialect.Sqlite;
 
         public static IOrmLiteDialectProvider DefaultProvider = SqlServerDialect.Provider;
         public static string DefaultConnection = SqlServerBuildDb;
@@ -124,7 +126,7 @@ namespace ServiceStack.OrmLite.Tests
             //OrmLiteConfig.UseParameterizeSqlExpressions = false;
 
             //OrmLiteConfig.DeoptimizeReader = true;
-            LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: false);
+            LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: Config.EnableDebugLogging);
             switch (Dialect)
             {
                 case Dialect.Sqlite:
@@ -133,8 +135,16 @@ namespace ServiceStack.OrmLite.Tests
                     return dbFactory;
                 case Dialect.SqlServer:
                     return Init(Config.SqlServerBuildDb, SqlServerDialect.Provider);
+                case Dialect.SqlServer2008:
+                    return Init(Config.SqlServerBuildDb, SqlServer2008Dialect.Provider);
                 case Dialect.SqlServer2012:
                     return Init(Config.SqlServerBuildDb, SqlServer2012Dialect.Provider);
+                case Dialect.SqlServer2014:
+                    return Init(Config.SqlServerBuildDb, SqlServer2014Dialect.Provider);
+                case Dialect.SqlServer2016:
+                    return Init(Config.SqlServerBuildDb, SqlServer2016Dialect.Provider);
+                case Dialect.SqlServer2017:
+                    return Init(Config.SqlServerBuildDb, SqlServer2017Dialect.Provider);
                 case Dialect.MySql:
                     return Init(Config.MySqlDb, MySqlDialect.Provider);
                 case Dialect.PostgreSql:

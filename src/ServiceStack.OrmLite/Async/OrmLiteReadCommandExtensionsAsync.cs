@@ -25,6 +25,8 @@ namespace ServiceStack.OrmLite
             if (Log.IsDebugEnabled)
                 Log.DebugCommand(dbCmd);
 
+            OrmLiteConfig.BeforeExecFilter?.Invoke(dbCmd);
+
             return dbCmd.GetDialectProvider().ExecuteReaderAsync(dbCmd, token);
         }
 
@@ -40,6 +42,8 @@ namespace ServiceStack.OrmLite
 
             if (Log.IsDebugEnabled)
                 Log.DebugCommand(dbCmd);
+
+            OrmLiteConfig.BeforeExecFilter?.Invoke(dbCmd);
 
             return dbCmd.GetDialectProvider().ExecuteReaderAsync(dbCmd, token);
         }
@@ -71,21 +75,13 @@ namespace ServiceStack.OrmLite
 
         internal static Task<T> SingleByIdAsync<T>(this IDbCommand dbCmd, object value, CancellationToken token)
         {
-            if (!dbCmd.CanReuseParam<T>(ModelDefinition<T>.PrimaryKeyName))
-                dbCmd.SetFilter<T>(ModelDefinition<T>.PrimaryKeyName, value);
-
-            ((IDbDataParameter)dbCmd.Parameters[0]).Value = value;
-
+            dbCmd.SetFilter<T>(ModelDefinition<T>.PrimaryKeyName, value);
             return dbCmd.ConvertToAsync<T>(null, token);
         }
 
         internal static Task<T> SingleWhereAsync<T>(this IDbCommand dbCmd, string name, object value, CancellationToken token)
         {
-            if (!dbCmd.CanReuseParam<T>(name))
-                dbCmd.SetFilter<T>(name, value);
-
-            ((IDbDataParameter)dbCmd.Parameters[0]).Value = value;
-
+            dbCmd.SetFilter<T>(name, value);
             return dbCmd.ConvertToAsync<T>(null, token);
         }
 
@@ -110,11 +106,7 @@ namespace ServiceStack.OrmLite
 
         internal static Task<List<T>> WhereAsync<T>(this IDbCommand dbCmd, string name, object value, CancellationToken token)
         {
-            if (!dbCmd.CanReuseParam<T>(name))
-                dbCmd.SetFilter<T>(name, value);
-
-            ((IDbDataParameter)dbCmd.Parameters[0]).Value = value;
-
+            dbCmd.SetFilter<T>(name, value);
             return dbCmd.ConvertToListAsync<T>(null, token);
         }
 
@@ -137,7 +129,7 @@ namespace ServiceStack.OrmLite
 
         internal static Task<List<T>> SelectAsync<T>(this IDbCommand dbCmd, string sql, Dictionary<string, object> dict, CancellationToken token)
         {
-            dbCmd.SetParameters(dict, excludeDefaults: false).CommandText = dbCmd.GetDialectProvider().ToSelectStatement(typeof(T), sql);
+            dbCmd.SetParameters(dict, excludeDefaults: false, sql:ref sql).CommandText = dbCmd.GetDialectProvider().ToSelectStatement(typeof(T), sql);
             return dbCmd.ConvertToListAsync<T>(null, token);
         }
 
@@ -155,7 +147,7 @@ namespace ServiceStack.OrmLite
 
         internal static Task<List<T>> SqlListAsync<T>(this IDbCommand dbCmd, string sql, Dictionary<string, object> dict, CancellationToken token)
         {
-            dbCmd.SetParameters(dict, excludeDefaults: false).CommandText = sql;
+            dbCmd.SetParameters(dict, excludeDefaults: false, sql:ref sql).CommandText = sql;
             return dbCmd.ConvertToListAsync<T>(null, token);
         }
 
@@ -175,13 +167,13 @@ namespace ServiceStack.OrmLite
 
         internal static Task<List<T>> SqlColumnAsync<T>(this IDbCommand dbCmd, string sql, object anonType, CancellationToken token)
         {
-            dbCmd.SetParameters(anonType.ToObjectDictionary(), excludeDefaults: false).CommandText = sql;
+            dbCmd.SetParameters(anonType.ToObjectDictionary(), excludeDefaults: false, sql:ref sql).CommandText = sql;
             return dbCmd.ConvertToListAsync<T>(null, token);
         }
 
         internal static Task<List<T>> SqlColumnAsync<T>(this IDbCommand dbCmd, string sql, Dictionary<string, object> dict, CancellationToken token)
         {
-            dbCmd.SetParameters(dict, excludeDefaults: false).CommandText = sql;
+            dbCmd.SetParameters(dict, excludeDefaults: false, sql:ref sql).CommandText = sql;
             return dbCmd.ConvertToListAsync<T>(null, token);
         }
 
@@ -197,7 +189,7 @@ namespace ServiceStack.OrmLite
 
         internal static Task<T> SqlScalarAsync<T>(this IDbCommand dbCmd, string sql, Dictionary<string, object> dict, CancellationToken token)
         {
-            return dbCmd.SetParameters(dict, excludeDefaults: false).ScalarAsync<T>(sql, token);
+            return dbCmd.SetParameters(dict, excludeDefaults: false, sql:ref sql).ScalarAsync<T>(sql, token);
         }
 
         internal static Task<List<T>> SelectNonDefaultsAsync<T>(this IDbCommand dbCmd, object filter, CancellationToken token)
@@ -274,7 +266,7 @@ namespace ServiceStack.OrmLite
         internal static Task<Dictionary<K, List<V>>> LookupAsync<K, V>(this IDbCommand dbCmd, string sql, object anonType, CancellationToken token)
         {
             if (anonType != null) 
-                dbCmd.SetParameters(anonType.ToObjectDictionary(), (bool)false);
+                dbCmd.SetParameters(anonType.ToObjectDictionary(), (bool)false, sql:ref sql);
 
             return dbCmd.LookupAsync<K, V>(sql, token);
         }
@@ -300,7 +292,7 @@ namespace ServiceStack.OrmLite
         internal static Task<Dictionary<K, V>> DictionaryAsync<K, V>(this IDbCommand dbCmd, string sql, object anonType, CancellationToken token)
         {
             if (anonType != null) 
-                dbCmd.SetParameters(anonType.ToObjectDictionary(), excludeDefaults: false);
+                dbCmd.SetParameters(anonType.ToObjectDictionary(), excludeDefaults: false, sql:ref sql);
 
             return dbCmd.DictionaryAsync<K, V>(sql, token);
         }
@@ -319,16 +311,17 @@ namespace ServiceStack.OrmLite
 
         internal static Task<bool> ExistsAsync<T>(this IDbCommand dbCmd, object anonType, CancellationToken token)
         {
-            if (anonType != null) dbCmd.SetParameters(anonType.ToObjectDictionary(), excludeDefaults: true);
+            string sql = null;
+            if (anonType != null) dbCmd.SetParameters(anonType.ToObjectDictionary(), excludeDefaults: true, sql:ref sql);
 
-            var sql = dbCmd.GetFilterSql<T>();
+            sql = dbCmd.GetFilterSql<T>();
 
             return dbCmd.ScalarAsync(sql, token).Then(x => x != null);
         }
 
         internal static Task<bool> ExistsAsync<T>(this IDbCommand dbCmd, string sql, object anonType, CancellationToken token)
         {
-            if (anonType != null) dbCmd.SetParameters(anonType.ToObjectDictionary(), (bool)false);
+            if (anonType != null) dbCmd.SetParameters(anonType.ToObjectDictionary(), (bool)false, sql:ref sql);
 
             return dbCmd.ScalarAsync(dbCmd.GetDialectProvider().ToSelectStatement(typeof(T), sql), token)
                 .Then(x => x != null);
@@ -400,11 +393,11 @@ namespace ServiceStack.OrmLite
             var loadList = new LoadListAsync<Into, From>(dbCmd, expr);
 
             var fieldDefs = loadList.FieldDefs;
-            if (!include.IsEmpty())
+            if (include?.Length > 0)
             {
                 // Check that any include values aren't reference fields of the specified From type
                 var fields = fieldDefs.Select(q => q.FieldName);
-                var invalid = include.Except<string>(fields).ToList();
+                var invalid = include.Except(fields).ToList();
                 if (invalid.Count > 0)
                     throw new ArgumentException($"Fields '{invalid.Join("', '")}' are not Reference Properties of Type '{typeof(From).Name}'");
 

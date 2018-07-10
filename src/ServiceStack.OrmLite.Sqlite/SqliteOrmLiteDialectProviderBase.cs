@@ -32,6 +32,8 @@ namespace ServiceStack.OrmLite.Sqlite
             this.Variables = new Dictionary<string, string>
             {
                 { OrmLiteVariables.SystemUtc, "CURRENT_TIMESTAMP" },
+                { OrmLiteVariables.MaxText, "VARCHAR(1000000)" },
+                { OrmLiteVariables.MaxTextUnicode, "NVARCHAR(1000000)" },
             };
         }
 
@@ -202,6 +204,13 @@ namespace ServiceStack.OrmLite.Sqlite
                 return ret + " DEFAULT 1";
 
             return ret;
+        }
+
+        public override string SqlConflict(string sql, string conflictResolution)
+        {
+            // http://www.sqlite.org/lang_conflict.html
+            var parts = sql.SplitOnFirst(' ');
+            return parts[0] + " OR " + conflictResolution + " " + parts[1];
         }
 
         public override string SqlConcat(IEnumerable<object> args) => string.Join(" || ", args);

@@ -7,6 +7,8 @@ namespace ServiceStack.OrmLite
 {
     public static partial class Sql
     {
+	    public static string VARCHAR = nameof(VARCHAR); 
+	    
         public static List<object> Flatten(IEnumerable list)
         {
             var ret = new List<object>();
@@ -16,8 +18,7 @@ namespace ServiceStack.OrmLite
             {
                 if (item == null) continue;
 
-                var arr = item as IEnumerable;
-                if (arr != null && !(item is string))
+                if (item is IEnumerable arr && !(item is string))
                 {
                     ret.AddRange(arr.Cast<object>());
                 }
@@ -68,6 +69,10 @@ namespace ServiceStack.OrmLite
         public static string Custom(string customSql) => customSql;
 
         public static T Custom<T>(string customSql) => default(T);
+
+	    public static string Cast(object value, string castAs) => $"CAST({value} AS {castAs})";
+
+        public const string EOT= "0 EOT";
     }
 
     /// <summary>

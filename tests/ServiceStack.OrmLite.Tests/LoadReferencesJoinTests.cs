@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
@@ -10,6 +9,7 @@ using ServiceStack.OrmLite.Dapper;
 using ServiceStack.OrmLite.Tests.UseCase;
 using ServiceStack.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace ServiceStack.OrmLite.Tests
 {
@@ -70,6 +70,20 @@ namespace ServiceStack.OrmLite.Tests
             db.Save(customer, references: true);
 
             return customer;
+        }
+
+        [Test]
+        public async Task Can_execute_LoadSelectAsync_with_OrderBy()
+        {
+            var customers = AddCustomersWithOrders();
+
+            var q = db.From<Customer>()
+                .OrderByFields("Id");
+
+            string[] include = null; 
+            var results = await db.LoadSelectAsync(q);
+            
+            Assert.That(results.Count, Is.GreaterThan(1));
         }
 
         public class FullCustomerInfo
@@ -712,7 +726,7 @@ namespace ServiceStack.OrmLite.Tests
             //This version of MariaDB doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'
             if (Dialect == Dialect.MySql)
                 return;
-            if (Dialect == Dialect.SqlServer) //Only one expression can be specified in the select list when the subquery is not introduced with EXISTS.
+            if ((Dialect & Dialect.AnySqlServer) == Dialect) //Only one expression can be specified in the select list when the subquery is not introduced with EXISTS.
                 return;
 
             db.DropTable<ParentSelf>();

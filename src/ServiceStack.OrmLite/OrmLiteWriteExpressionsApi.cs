@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 
@@ -124,6 +125,17 @@ namespace ServiceStack.OrmLite
         }
 
         /// <summary>
+        /// Updates all values from Object Dictionary matching the where condition. E.g
+        /// 
+        ///   db.UpdateOnly&lt;Person&gt;(new Dictionary&lt;string,object&lt; { {"FirstName", "JJ"} }, where:p => p.FirstName == "Jimi");
+        ///   UPDATE "Person" SET "FirstName" = 'JJ' WHERE ("FirstName" = 'Jimi')
+        /// </summary>
+        public static int UpdateOnly<T>(this IDbConnection dbConn, Dictionary<string, object> updateFields, Expression<Func<T, bool>> obj)
+        {
+            return dbConn.Exec(dbCmd => dbCmd.UpdateOnly(updateFields, obj));
+        }
+
+        /// <summary>
         /// Updates all non-default values set on item matching the where condition (if any). E.g
         /// 
         ///   db.UpdateNonDefaults(new Person { FirstName = "JJ" }, p => p.FirstName == "Jimi");
@@ -146,14 +158,22 @@ namespace ServiceStack.OrmLite
         }
 
         /// <summary>
+        /// Updates the entity using the primary key as the filter
+        /// </summary>
+        public static int Update<T>(this IDbConnection dbConn, object entity)
+        {
+            return dbConn.Exec(dbCmd => dbCmd.Update<T>(entity, where:null, commandFilter:null));
+        }
+
+        /// <summary>
         /// Updates all matching fields populated on anonymousType that matches where condition (if any). E.g:
         /// 
         ///   db.Update&lt;Person&gt;(new { FirstName = "JJ" }, p => p.LastName == "Hendrix");
         ///   UPDATE "Person" SET "FirstName" = 'JJ' WHERE ("LastName" = 'Hendrix')
         /// </summary>
-        public static int Update<T>(this IDbConnection dbConn, object updateOnly, Expression<Func<T, bool>> where = null, Action<IDbCommand> commandFilter = null)
+        public static int Update<T>(this IDbConnection dbConn, object updateOnly, Expression<Func<T, bool>> where, Action<IDbCommand> commandFilter = null)
         {
-            return dbConn.Exec(dbCmd => dbCmd.Update(updateOnly, where, commandFilter));
+            return dbConn.Exec(dbCmd => dbCmd.Update<T>(updateOnly, where, commandFilter));
         }
 
         /// <summary>

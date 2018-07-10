@@ -395,7 +395,7 @@ namespace ServiceStack.OrmLite
 
         public virtual string GetColumnDefinition(FieldDefinition fieldDef)
         {
-            var fieldDefinition = fieldDef.CustomFieldDefinition ?? 
+            var fieldDefinition = ResolveFragment(fieldDef.CustomFieldDefinition) ?? 
                 GetColumnTypeDefinition(fieldDef.ColumnType, fieldDef.FieldLength, fieldDef.Scale);
 
             var sql = StringBuilderCache.Allocate();
@@ -412,6 +412,11 @@ namespace ServiceStack.OrmLite
             else
             {
                 sql.Append(fieldDef.IsNullable ? " NULL" : " NOT NULL");
+            }
+
+            if (fieldDef.IsUniqueConstraint)
+            {
+                sql.Append(" UNIQUE");
             }
 
             var defaultValue = GetDefaultValue(fieldDef);
@@ -533,6 +538,9 @@ namespace ServiceStack.OrmLite
             return sqlColumns;
         }
 
+        protected virtual bool ShouldSkipInsert(FieldDefinition fieldDef) => 
+            fieldDef.ShouldSkipInsert();
+
         public virtual string ToInsertRowStatement(IDbCommand cmd, object objWithProperties, ICollection<string> insertFields = null)
         {
             if (insertFields == null)
@@ -544,7 +552,7 @@ namespace ServiceStack.OrmLite
 
             foreach (var fieldDef in modelDef.FieldDefinitionsArray)
             {
-                if (fieldDef.ShouldSkipInsert())
+                if (ShouldSkipInsert(fieldDef))
                     continue;
 
                 if (insertFields.Count > 0 && !insertFields.Contains(fieldDef.Name, StringComparer.OrdinalIgnoreCase))
@@ -561,7 +569,7 @@ namespace ServiceStack.OrmLite
                     sbColumnValues.Append(this.GetParam(SanitizeFieldNameForParamName(fieldDef.FieldName)));
 
                     var p = AddParameter(cmd, fieldDef);
-                    p.Value = fieldDef.GetValue(objWithProperties) ?? DBNull.Value;
+                    p.Value = GetFieldValue(fieldDef, fieldDef.GetValue(objWithProperties)) ?? DBNull.Value;
                 }
                 catch (Exception ex)
                 {
@@ -588,6 +596,15 @@ namespace ServiceStack.OrmLite
             dialectProvider.SetParameterValues<T>(dbCmd, item);
 
             return MergeParamsIntoSql(dbCmd.CommandText, ToArray(dbCmd.Parameters));
+        }
+
+        protected virtual object GetInsertDefaultValue(FieldDefinition fieldDef)
+        {
+            if (!fieldDef.AutoId)
+                return null;
+            if (fieldDef.FieldType == typeof(Guid))
+                return Guid.NewGuid();
+            return null;
         }
 
         public virtual void PrepareParameterizedInsertStatement<T>(IDbCommand cmd, ICollection<string> insertFields = null)
@@ -617,7 +634,12 @@ namespace ServiceStack.OrmLite
                     sbColumnNames.Append(GetQuotedColumnName(fieldDef.FieldName));
                     sbColumnValues.Append(this.GetParam(SanitizeFieldNameForParamName(fieldDef.FieldName)));
 
-                    AddParameter(cmd, fieldDef);
+                    var p = AddParameter(cmd, fieldDef);
+
+                    if (fieldDef.AutoId)
+                    {
+                        p.Value = GetInsertDefaultValue(fieldDef);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -875,6 +897,18 @@ namespace ServiceStack.OrmLite
                         throw new ArgumentException($"Field Definition '{fieldName}' was not found");
                 }
 
+                if (fieldDef.AutoId && p.Value != null)
+                {
+                    var existingId = fieldDef.GetValueFn(obj);
+                    if (existingId is Guid existingGuid && existingGuid != default(Guid))
+                    {
+                        p.Value = existingGuid; // Use existing value if not default
+                    }
+
+                    fieldDef.SetValueFn(obj, p.Value); //Auto populate default values
+                    continue;
+                }
+                
                 SetParameterValue<T>(fieldDef, p, obj);
             }
         }
@@ -1036,7 +1070,7 @@ namespace ServiceStack.OrmLite
             foreach (var entry in args)
             {
                 var fieldDef = modelDef.GetFieldDefinition(entry.Key);
-                if (fieldDef.ShouldSkipUpdate() || fieldDef.AutoIncrement)
+                if (fieldDef.ShouldSkipUpdate() || fieldDef.IsPrimaryKey || fieldDef.AutoIncrement)
                     continue;
 
                 var value = entry.Value;
@@ -1141,6 +1175,9 @@ namespace ServiceStack.OrmLite
             return StringBuilderCache.ReturnAndFree(sql);
         }
 
+        public virtual bool HasInsertReturnValues(ModelDefinition modelDef) =>
+            modelDef.FieldDefinitions.Any(x => x.ReturnOnInsert);
+
         public string GetDefaultValue(Type tableType, string fieldName)
         {
             var modelDef = tableType.GetModelDefinition();
@@ -1152,15 +1189,33 @@ namespace ServiceStack.OrmLite
         {
             var defaultValue = fieldDef.DefaultValue;
             if (string.IsNullOrEmpty(defaultValue))
+            {
+                return fieldDef.AutoId 
+                    ? GetAutoIdDefaultValue(fieldDef) 
+                    : null;
+            }
+
+            return ResolveFragment(defaultValue);
+        }
+
+        public virtual string ResolveFragment(string sql)
+        {
+            if (string.IsNullOrEmpty(sql))
                 return null;
+            
+            if (!sql.StartsWith("{"))
+                return sql;
 
-            if (!defaultValue.StartsWith("{"))
-                return defaultValue;
-
-            return Variables.TryGetValue(defaultValue, out var variable)
+            return Variables.TryGetValue(sql, out var variable)
                 ? variable
                 : null;
         }
+
+        public virtual string GetAutoIdDefaultValue(FieldDefinition fieldDef) => null;
+
+        public Func<ModelDefinition, List<FieldDefinition>> CreateTableFieldsStrategy { get; set; } = GetFieldDefinitions;
+
+        public static List<FieldDefinition> GetFieldDefinitions(ModelDefinition modelDef) => modelDef.FieldDefinitions;
 
         public virtual string ToCreateTableStatement(Type tableType)
         {
@@ -1168,7 +1223,7 @@ namespace ServiceStack.OrmLite
             var sbConstraints = StringBuilderCacheAlt.Allocate();
 
             var modelDef = tableType.GetModelDefinition();
-            foreach (var fieldDef in modelDef.FieldDefinitions)
+            foreach (var fieldDef in CreateTableFieldsStrategy(modelDef))
             {
                 if (fieldDef.CustomSelect != null)
                     continue;
@@ -1201,11 +1256,31 @@ namespace ServiceStack.OrmLite
                 sbConstraints.Append(GetForeignKeyOnDeleteClause(fieldDef.ForeignKey));
                 sbConstraints.Append(GetForeignKeyOnUpdateClause(fieldDef.ForeignKey));
             }
+
+            var uniqueConstraints = GetUniqueConstraints(modelDef);
+            if (uniqueConstraints != null)
+            {
+                sbConstraints.Append(",\n" + uniqueConstraints);
+            }
+
             var sql = $"CREATE TABLE {GetQuotedTableName(modelDef)} " +
                       $"\n(\n  {StringBuilderCache.ReturnAndFree(sbColumns)}{StringBuilderCacheAlt.ReturnAndFree(sbConstraints)} \n); \n";
 
             return sql;
         }
+
+        public virtual string GetUniqueConstraints(ModelDefinition modelDef)
+        {
+            var constraints = modelDef.UniqueConstraints.Map(x => 
+                $"CONSTRAINT {GetUniqueConstraintName(x, GetTableName(modelDef))} UNIQUE ({x.FieldNames.Map(f => modelDef.GetQuotedName(f,this)).Join(",")})" );
+
+            return constraints.Count > 0
+                ? constraints.Join(",\n")
+                : null;
+        }
+
+        protected virtual string GetUniqueConstraintName(UniqueConstraintAttribute constraint, string tableName) =>
+            constraint.Name ?? $"UC_{tableName}_{constraint.FieldNames.Join("_")}";
 
         public virtual string GetCheckConstraint(FieldDefinition fieldDef)
         {
@@ -1244,10 +1319,10 @@ namespace ServiceStack.OrmLite
             {
                 if (!fieldDef.IsIndexed) continue;
 
-                var indexName = GetIndexName(fieldDef.IsUnique, modelDef.ModelName.SafeVarName(), fieldDef.FieldName);
+                var indexName = GetIndexName(fieldDef.IsUniqueIndex, modelDef.ModelName.SafeVarName(), fieldDef.FieldName);
 
                 sqlIndexes.Add(
-                    ToCreateIndexStatement(fieldDef.IsUnique, indexName, modelDef, fieldDef.FieldName, isCombined: false, fieldDef: fieldDef));
+                    ToCreateIndexStatement(fieldDef.IsUniqueIndex, indexName, modelDef, fieldDef.FieldName, isCombined: false, fieldDef: fieldDef));
             }
 
             foreach (var compositeIndex in modelDef.CompositeIndexes)
@@ -1523,6 +1598,8 @@ namespace ServiceStack.OrmLite
                    $"DROP COLUMN {provider.GetQuotedColumnName(columnName)};";
         }
 
+        public virtual string SqlConflict(string sql, string conflictResolution) => sql; //NOOP
+
         public virtual string SqlConcat(IEnumerable<object> args) => $"CONCAT({string.Join(", ", args)})";
 
         public virtual string SqlCurrency(string fieldOrValue) => SqlCurrency(fieldOrValue, "$");
@@ -1536,6 +1613,8 @@ namespace ServiceStack.OrmLite
             : offset == null
                 ? "LIMIT " + rows
                 : "LIMIT " + rows.GetValueOrDefault(int.MaxValue) + " OFFSET " + offset;
+        
+        public virtual string SqlCast(object fieldOrValue, string castAs) => $"CAST({fieldOrValue} AS {castAs})";
 
         //Async API's, should be overrided by Dialect Providers to use .ConfigureAwait(false)
         //Default impl below uses TaskAwaiter shim in async.cs

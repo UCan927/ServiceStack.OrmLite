@@ -52,6 +52,8 @@ namespace ServiceStack.OrmLite
         IStringSerializer StringSerializer { get; set; }
 
         Func<string, string> ParamNameFilter { get; set; }
+        
+        Dictionary<string, string> Variables { get; }
 
         /// <summary>
         /// Quote the string so that it can be used inside an SQL-expression
@@ -64,6 +66,10 @@ namespace ServiceStack.OrmLite
         string GetQuotedValue(object value, Type fieldType);
 
         string GetDefaultValue(Type tableType, string fieldName);
+
+        string GetDefaultValue(FieldDefinition fieldDef);
+
+        bool HasInsertReturnValues(ModelDefinition modelDef);
 
         object GetParamValue(object value, Type fieldType);
 
@@ -105,8 +111,10 @@ namespace ServiceStack.OrmLite
 
         void PrepareParameterizedInsertStatement<T>(IDbCommand cmd, ICollection<string> insertFields = null);
 
+        /// <returns>If had RowVersion</returns>
         bool PrepareParameterizedUpdateStatement<T>(IDbCommand cmd, ICollection<string> updateFields = null);
 
+        /// <returns>If had RowVersion</returns>
         bool PrepareParameterizedDeleteStatement<T>(IDbCommand cmd, IDictionary<string, object> delteFieldValues);
 
         void PrepareStoredProcedureStatement<T>(IDbCommand cmd, T obj);
@@ -172,8 +180,6 @@ namespace ServiceStack.OrmLite
 
         IDbDataParameter CreateParam();
 
-        void InitDbParam(IDbDataParameter dbParam, Type columnType);
-
         //DDL
         string GetDropForeignKeyConstraints(ModelDefinition modelDef);
 
@@ -207,10 +213,13 @@ namespace ServiceStack.OrmLite
         string ToInsertStatement<T>(IDbCommand dbCmd, T item, ICollection<string> insertFields = null);
         string MergeParamsIntoSql(string sql, IEnumerable<IDbDataParameter> dbParams);
 
+        string SqlConflict(string sql, string conflictResolution);
+
         string SqlConcat(IEnumerable<object> args);
         string SqlCurrency(string fieldOrValue);
         string SqlCurrency(string fieldOrValue, string currencySymbol);
         string SqlBool(bool value);
         string SqlLimit(int? offset = null, int? rows = null);
+        string SqlCast(object fieldOrValue, string castAs);
     }
 }

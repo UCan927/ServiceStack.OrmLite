@@ -36,11 +36,13 @@ namespace ServiceStack.OrmLite
 
         public bool AutoIncrement { get; set; }
 
+        public bool AutoId { get; set; }
+
         public bool IsNullable { get; set; }
 
         public bool IsIndexed { get; set; }
 
-        public bool IsUnique { get; set; }
+        public bool IsUniqueIndex { get; set; }
 
         public bool IsClustered { get; set; }
 
@@ -56,6 +58,8 @@ namespace ServiceStack.OrmLite
 
         public string CheckConstraint { get; set; }
 
+        public bool IsUniqueConstraint { get; set; }
+        
         public ForeignKeyConstraint ForeignKey { get; set; }
 
         public GetMemberDelegate GetValueFn { get; set; }
@@ -88,6 +92,8 @@ namespace ServiceStack.OrmLite
 
         public string CustomSelect { get; set; }
 
+        public bool RequiresAlias => Alias != null || CustomSelect != null;
+
         public string BelongToModelName { get; set; }
 
         public bool IsReference { get; set; }
@@ -99,7 +105,9 @@ namespace ServiceStack.OrmLite
         public bool IgnoreOnUpdate { get; set; }
 
         public bool IgnoreOnInsert { get; set; }
-        
+
+        public bool ReturnOnInsert { get; set; }
+
         public override string ToString() => Name;
 
         public bool ShouldSkipInsert() => IgnoreOnInsert || AutoIncrement || IsComputed || IsRowVersion;
@@ -132,15 +140,18 @@ namespace ServiceStack.OrmLite
                 PropertyInfo = PropertyInfo,
                 IsPrimaryKey = IsPrimaryKey,
                 AutoIncrement = AutoIncrement,
+                AutoId = AutoId,
                 IsNullable = IsNullable,
                 IsIndexed = IsIndexed,
-                IsUnique = IsUnique,
+                IsUniqueIndex = IsUniqueIndex,
                 IsClustered = IsClustered,
                 IsNonClustered = IsNonClustered,
                 IsRowVersion = IsRowVersion,
                 FieldLength = FieldLength,
                 Scale = Scale,
                 DefaultValue = DefaultValue,
+                CheckConstraint = CheckConstraint,
+                IsUniqueConstraint = IsUniqueConstraint,
                 ForeignKey = ForeignKey,
                 GetValueFn = GetValueFn,
                 SetValueFn = SetValueFn,

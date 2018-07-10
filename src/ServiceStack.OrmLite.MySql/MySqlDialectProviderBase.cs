@@ -46,6 +46,8 @@ namespace ServiceStack.OrmLite.MySql
             this.Variables = new Dictionary<string, string>
             {
                 { OrmLiteVariables.SystemUtc, "CURRENT_TIMESTAMP" },
+                { OrmLiteVariables.MaxText, "LONGTEXT" },
+                { OrmLiteVariables.MaxTextUnicode, "LONGTEXT" },
             };
         }
 
@@ -149,7 +151,7 @@ namespace ServiceStack.OrmLite.MySql
             var sbConstraints = StringBuilderCache.Allocate();
 
             var modelDef = GetModel(tableType);
-            foreach (var fieldDef in modelDef.FieldDefinitions)
+            foreach (var fieldDef in CreateTableFieldsStrategy(modelDef))
             {
                 if (fieldDef.CustomSelect != null)
                     continue;
@@ -175,6 +177,13 @@ namespace ServiceStack.OrmLite.MySql
                 if (!string.IsNullOrEmpty(fieldDef.ForeignKey.OnUpdate))
                     sbConstraints.AppendFormat(" ON UPDATE {0}", fieldDef.ForeignKey.OnUpdate);
             }
+
+            var uniqueConstraints = GetUniqueConstraints(modelDef);
+            if (uniqueConstraints != null)
+            {
+                sbConstraints.Append(",\n" + uniqueConstraints);
+            }
+
             var sql = string.Format(
                 "CREATE TABLE {0} \n(\n  {1}{2} \n); \n", GetQuotedTableName(modelDef),
                 StringBuilderCache.ReturnAndFree(sbColumns),
@@ -185,7 +194,7 @@ namespace ServiceStack.OrmLite.MySql
 
         public override string GetColumnDefinition(FieldDefinition fieldDef)
         {
-            if (fieldDef.PropertyInfo.FirstAttribute<TextAttribute>() != null)
+            if (fieldDef.PropertyInfo?.HasAttribute<TextAttribute>() == true)
             {
                 var sql = StringBuilderCache.Allocate();
                 sql.AppendFormat("{0} {1}", GetQuotedColumnName(fieldDef.FieldName), TextColumnDefinition);
@@ -200,9 +209,20 @@ namespace ServiceStack.OrmLite.MySql
             return ret;
         }
 
+        public override string SqlConflict(string sql, string conflictResolution)
+        {
+            var parts = sql.SplitOnFirst(' ');
+            return parts[0] + " " + conflictResolution + " " + parts[1];
+        }
+
         public override string SqlCurrency(string fieldOrValue, string currencySymbol) =>
             SqlConcat(new[] { "'" + currencySymbol + "'", "cast(" + fieldOrValue + " as decimal(15,2))" });
 
+        public override string SqlCast(object fieldOrValue, string castAs) => 
+            castAs == Sql.VARCHAR
+                ? $"CAST({fieldOrValue} AS CHAR(1000))"
+                : $"CAST({fieldOrValue} AS {castAs})";
+        
         protected DbConnection Unwrap(IDbConnection db)
         {
             return (DbConnection)db.ToDbConnection();

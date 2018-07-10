@@ -1,30 +1,32 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.3
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{6CEB3EDE-9F02-4F4F-BD8A-1B2939C1AE6E}"
 	ProjectSection(SolutionItems) = preProject
-		..\build\appsettings.license.txt = ..\build\appsettings.license.txt
-		..\build\build-core.proj = ..\build\build-core.proj
-		..\build\build-core.sh = ..\build\build-core.sh
 		..\build\build.bat = ..\build\build.bat
 		..\build\build.proj = ..\build\build.proj
 		..\build\build.tasks = ..\build\build.tasks
-		..\build\copy.bat = ..\build\copy.bat
-		..\build\publish-core.sh = ..\build\publish-core.sh
 		..\README.md = ..\README.md
+		..\NuGet\ServiceStack.OrmLite.Core\servicestack.ormlite.core.nuspec = ..\NuGet\ServiceStack.OrmLite.Core\servicestack.ormlite.core.nuspec
 		..\NuGet\ServiceStack.OrmLite.Firebird\servicestack.ormlite.firebird.nuspec = ..\NuGet\ServiceStack.OrmLite.Firebird\servicestack.ormlite.firebird.nuspec
+		..\NuGet\ServiceStack.OrmLite.MySql.Core\servicestack.ormlite.mysql.core.nuspec = ..\NuGet\ServiceStack.OrmLite.MySql.Core\servicestack.ormlite.mysql.core.nuspec
 		..\NuGet\ServiceStack.OrmLite.MySql\servicestack.ormlite.mysql.nuspec = ..\NuGet\ServiceStack.OrmLite.MySql\servicestack.ormlite.mysql.nuspec
+		..\NuGet\ServiceStack.OrmLite.MySqlConnector.Core\servicestack.ormlite.mysqlconnector.core.nuspec = ..\NuGet\ServiceStack.OrmLite.MySqlConnector.Core\servicestack.ormlite.mysqlconnector.core.nuspec
 		..\NuGet\ServiceStack.OrmLite.MySqlConnector\servicestack.ormlite.mysqlconnector.nuspec = ..\NuGet\ServiceStack.OrmLite.MySqlConnector\servicestack.ormlite.mysqlconnector.nuspec
 		..\NuGet\ServiceStack.OrmLite\servicestack.ormlite.nuspec = ..\NuGet\ServiceStack.OrmLite\servicestack.ormlite.nuspec
 		..\NuGet\ServiceStack.OrmLite.Oracle\servicestack.ormlite.oracle.nuspec = ..\NuGet\ServiceStack.OrmLite.Oracle\servicestack.ormlite.oracle.nuspec
+		..\NuGet\ServiceStack.OrmLite.PostgreSQL.Core\servicestack.ormlite.postgresql.core.nuspec = ..\NuGet\ServiceStack.OrmLite.PostgreSQL.Core\servicestack.ormlite.postgresql.core.nuspec
 		..\NuGet\ServiceStack.OrmLite.PostgreSQL\servicestack.ormlite.postgresql.nuspec = ..\NuGet\ServiceStack.OrmLite.PostgreSQL\servicestack.ormlite.postgresql.nuspec
+		..\NuGet\ServiceStack.OrmLite.Sqlite.Core\servicestack.ormlite.sqlite.core.nuspec = ..\NuGet\ServiceStack.OrmLite.Sqlite.Core\servicestack.ormlite.sqlite.core.nuspec
 		..\NuGet\ServiceStack.OrmLite.Sqlite\servicestack.ormlite.sqlite.nuspec = ..\NuGet\ServiceStack.OrmLite.Sqlite\servicestack.ormlite.sqlite.nuspec
 		..\NuGet\ServiceStack.OrmLite.Sqlite.Windows\servicestack.ormlite.sqlite.windows.nuspec = ..\NuGet\ServiceStack.OrmLite.Sqlite.Windows\servicestack.ormlite.sqlite.windows.nuspec
 		..\NuGet\ServiceStack.OrmLite.SqlServer.Converters\servicestack.ormlite.sqlserver.converters.nuspec = ..\NuGet\ServiceStack.OrmLite.SqlServer.Converters\servicestack.ormlite.sqlserver.converters.nuspec
+		..\NuGet\ServiceStack.OrmLite.SqlServer.Core\servicestack.ormlite.sqlserver.core.nuspec = ..\NuGet\ServiceStack.OrmLite.SqlServer.Core\servicestack.ormlite.sqlserver.core.nuspec
 		..\NuGet\ServiceStack.OrmLite.SqlServer\servicestack.ormlite.sqlserver.nuspec = ..\NuGet\ServiceStack.OrmLite.SqlServer\servicestack.ormlite.sqlserver.nuspec
 		..\NuGet\ServiceStack.OrmLite.T4\servicestack.ormlite.t4.nuspec = ..\NuGet\ServiceStack.OrmLite.T4\servicestack.ormlite.t4.nuspec
+		..\lib\copy.bat = ..\lib\copy.bat
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceStack.OrmLite.Sqlite", "ServiceStack.OrmLite.Sqlite\ServiceStack.OrmLite.Sqlite.csproj", "{CF68A37D-D071-469D-AE04-68594CB95382}"

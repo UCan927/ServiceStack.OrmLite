@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using ServiceStack.Data;
 using ServiceStack.DataAnnotations;
@@ -130,6 +132,15 @@ namespace ServiceStack.OrmLite.Tests.Issues
             bool IsDeleted { get; set; }
         }
 
+        private static void CreateTables(IDbConnection db)
+        {
+            db.DropTable<EventCategoryTbl>();
+            db.DropTable<FileTbl>();
+
+            db.CreateTable<FileTbl>();
+            db.CreateTable<EventCategoryTbl>();
+        }
+
         [Test]
         public void Can_execute_LoadSelect_when_child_references_implement_IHasSoftDelete()
         {
@@ -145,16 +156,79 @@ namespace ServiceStack.OrmLite.Tests.Issues
 
             using (var db = OpenDbConnection())
             {
-                db.DropTable<EventCategoryTbl>();
-                db.DropTable<FileTbl>();
-
-                db.CreateTable<FileTbl>();
-                db.CreateTable<EventCategoryTbl>();
+                CreateTables(db);
 
                 var results = db.LoadSelect<EventCategoryTbl>();
             }
 
             OrmLiteConfig.SqlExpressionSelectFilter = null;
+        }
+
+        [Test]
+        public void Can_execute_SoftDelete_with_GroupBy()
+        {
+            OrmLiteConfig.SqlExpressionSelectFilter = q =>
+            {
+                if (q.ModelDef.ModelType.HasInterface(typeof(IHasSoftDelete)))
+                {
+                    q.Where<IHasSoftDelete>(x => x.IsDeleted != true);
+                }
+            };
+
+            using (var db = OpenDbConnection())
+            {
+                CreateTables(db);
+
+                var name = "name";
+                var q = db.From<FileTbl>()
+                    .Where(x => x.Name == name && x.FileSizeBytes > 1000)
+                    .GroupBy(x => x.Extension)
+                    .Select(x => new { x.Extension, Total = Sql.As(Sql.Count("*"), "Total") });
+
+                var results = db.Dictionary<string, long>(q);
+            }
+
+            OrmLiteConfig.SqlExpressionSelectFilter = null;
+        }
+        
+        public class Person
+        {
+            [AutoIncrement]
+            public int Id { get; set; }
+
+            public string Name { get; set; }
+
+//            [References(typeof(Contact))]
+            public int ContactId { get; set; }
+            
+            [Reference]
+            public Contact Contact { get; set; }
+        }
+        
+        public class Contact
+        {
+            [AutoIncrement]
+            public int Id { get; set; }
+
+            public string Mobile { get; set; }
+        }
+
+        [Test]
+        public async Task Can_order_by_parent_table_in_LoadSelectAsync()
+        {
+            OrmLiteConfig.BeforeExecFilter = cmd => cmd.GetDebugString().Print(); 
+            
+            using (var db = OpenDbConnection())
+            {
+                db.DropAndCreateTable<Person>();
+                db.DropAndCreateTable<Contact>();
+                
+                string[] include = null; 
+                var personQuery = db.From<Person>();
+                personQuery.OrderByFields("Id");
+
+                var results = await db.LoadSelectAsync(personQuery, include);
+           }
         }
 
     }

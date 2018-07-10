@@ -10,14 +10,15 @@ namespace ServiceStack.OrmLite.Tests
         [Test]
         public void Can_insert_and_select_max_values()
         {
-            //OrmLiteConfig.ThrowOnError = true;
+            OrmLiteConfig.ThrowOnError = true;
+            var isSqlServer = (Dialect & Dialect.AnySqlServer) == Dialect;
 
             var model = new ModelWithFieldsOfDifferentTypes
             {
                 Int = int.MaxValue,
                 Long = long.MaxValue,
                 Double = double.MaxValue,
-                Decimal = Dialect != Dialect.SqlServer && Dialect != Dialect.SqlServer2012 && Dialect != Dialect.Sqlite
+                Decimal = !isSqlServer && Dialect != Dialect.Sqlite && Dialect != Dialect.PostgreSql
                     ? Decimal.MaxValue
                     : long.MaxValue,
                 DateTime = Dialect != Dialect.MySql 

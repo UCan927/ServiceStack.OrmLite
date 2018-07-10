@@ -47,10 +47,7 @@ namespace ServiceStack.OrmLite
         /// <summary>
         /// Used in DB Params. Defaults to DbType.String
         /// </summary>
-        public virtual DbType DbType
-        {
-            get { return DbType.String; }
-        }
+        public virtual DbType DbType => DbType.String;
 
         /// <summary>
         /// Quoted Value in SQL Statement
@@ -138,8 +135,7 @@ namespace ServiceStack.OrmLite
                 case TypeCode.Int64:
                     return Convert.ToInt64(value);
                 case TypeCode.UInt64:
-                    var byteValue = value as byte[];
-                    if (byteValue != null)
+                    if (value is byte[] byteValue)
                         return OrmLiteUtils.ConvertToULong(byteValue);
                     return Convert.ToUInt64(value);
                 case TypeCode.Single:
